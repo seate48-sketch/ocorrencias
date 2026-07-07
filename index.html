@@ -240,7 +240,7 @@
         }
 
         .dia-celula {
-            min-height: 68px;
+            min-height: 80px; /* Aumentado para acomodar o motivo */
             border: 1px solid #f0f0f0;
             padding: 4px 3px;
             cursor: pointer;
@@ -269,15 +269,23 @@
         ========================================================= */
         .ocorrencia {
             font-size: 9px;
-            padding: 2px 3px;
+            padding: 3px 4px;
             margin: 2px 0;
-            border-radius: 4px;
+            border-radius: 5px;
             color: white;
+            display: flex;
+            flex-direction: column; /* Colaborador em cima, motivo embaixo */
+            gap: 1px;
+            line-height: 1.1;
+            position: relative;
+        }
+
+        .ocorrencia-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            width: 100%;
             gap: 2px;
-            line-height: 1.2;
         }
 
         .ocorrencia-nome {
@@ -286,6 +294,17 @@
             white-space: nowrap;
             flex: 1;
             min-width: 0;
+            font-weight: 700;
+        }
+
+        .ocorrencia-motivo {
+            font-size: 8px;
+            opacity: 0.9;
+            font-style: italic;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
         }
 
         .btn-remover {
@@ -294,10 +313,10 @@
             color: white;
             border-radius: 50%;
             cursor: pointer;
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             min-height: unset;
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 700;
             flex-shrink: 0;
             display: flex;
@@ -470,11 +489,6 @@
             cursor: default;
         }
 
-        .form-group textarea {
-            resize: vertical;
-            min-height: 70px;
-        }
-
         .botoes-acoes {
             display: flex;
             gap: 10px;
@@ -542,7 +556,7 @@
             }
 
             .dia-celula {
-                min-height: 58px;
+                min-height: 75px;
                 padding: 3px 2px;
             }
 
@@ -552,13 +566,17 @@
 
             .ocorrencia {
                 font-size: 8px;
-                padding: 1px 2px;
+                padding: 2px 3px;
+            }
+
+            .ocorrencia-motivo {
+                font-size: 7px;
             }
 
             .btn-remover {
-                width: 14px;
-                height: 14px;
-                font-size: 8px;
+                width: 12px;
+                height: 12px;
+                font-size: 7px;
             }
 
             .modal-conteudo {
@@ -572,7 +590,7 @@
             }
 
             .dia-celula {
-                min-height: 52px;
+                min-height: 65px;
             }
         }
 
@@ -652,6 +670,9 @@
     let anoAtual       = new Date().getFullYear();
     let corSelecionada = 'colab-azul';
 
+    // Lista de motivos pré-definidos
+    const MOTIVOS_LISTA = ["Férias", "Médico", "Dentista", "Falta", "Ausente", "Liberado"];
+
     // Fila de sincronização para operações offline
     let filaSincronizacao = JSON.parse(localStorage.getItem('fila_sync') || '[]');
 
@@ -702,11 +723,9 @@
        INICIALIZAÇÃO E SUPABASE
     ========================================================= */
     async function init() {
-        // Definir o ano atual no select
         const selectAno = document.getElementById('selecionarAno');
         selectAno.value = anoAtual;
         if (!selectAno.value) {
-            // Ano não está nas opções; adicionar dinamicamente
             const opt = document.createElement('option');
             opt.value = anoAtual;
             opt.textContent = anoAtual;
@@ -720,8 +739,6 @@
             const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
             supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             await carregarDados();
-
-            // Tentar sincronizar operações pendentes
             await sincronizarFila();
         } catch (error) {
             console.error('Erro na inicialização:', error);
@@ -778,7 +795,6 @@
                         .select()
                         .single();
                     if (!error && nova) {
-                        // Substituir o ID temporário pelo ID real
                         const idx = ocorrencias.findIndex(o => o.id === op.idTemp);
                         if (idx !== -1) {
                             ocorrencias[idx].id = nova.id;
@@ -789,7 +805,7 @@
                 }
             } catch (e) {
                 console.warn('Falha ao sincronizar operação:', op, e);
-                filaSincronizacao.push(op); // Recolocar na fila se falhar
+                filaSincronizacao.push(op);
             }
         }
 
@@ -805,7 +821,6 @@
         mostrarStatus('Salvando...', 'normal');
 
         if (!supabase) {
-            // Modo offline: salvar localmente e enfileirar
             const idTemp = Date.now();
             ocorrencias.push({ id: idTemp, data, colaboradorId, motivo });
             filaSincronizacao.push({ tipo: 'inserir_ocorrencia', idTemp, data, colaboradorId, motivo });
@@ -838,7 +853,6 @@
 
         } catch (error) {
             console.error('Erro ao salvar ausência:', error);
-            // Fallback offline
             const idTemp = Date.now();
             ocorrencias.push({ id: idTemp, data, colaboradorId, motivo });
             filaSincronizacao.push({ tipo: 'inserir_ocorrencia', idTemp, data, colaboradorId, motivo });
@@ -997,7 +1011,6 @@
             diasGrid.className = 'dias-grid';
             diasGrid.setAttribute('role', 'grid');
 
-            // Cabeçalho dos dias da semana
             DIAS_SEMANA.forEach(d => {
                 const cab = document.createElement('div');
                 cab.className = 'cabecalho-dia';
@@ -1006,14 +1019,12 @@
                 diasGrid.appendChild(cab);
             });
 
-            // Células vazias antes do primeiro dia
             for (let i = 0; i < primeiroDia; i++) {
                 const vazio = document.createElement('div');
                 vazio.setAttribute('aria-hidden', 'true');
                 diasGrid.appendChild(vazio);
             }
 
-            // Células dos dias
             for (let dia = 1; dia <= diasNoMes; dia++) {
                 const dataStr   = `${anoAtual}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
                 const ocorrDia  = ocorrencias.filter(occ => occ.data === dataStr);
@@ -1022,14 +1033,13 @@
                 celula.className = 'dia-celula';
                 celula.setAttribute('role', 'button');
                 celula.setAttribute('tabindex', '0');
-                celula.setAttribute('aria-label', `${dia} de ${MESES[mes]}, ${ocorrDia.length} ausência(s). Clique para adicionar.`);
+                celula.setAttribute('aria-label', `${dia} de ${MESES[mes]}, ${ocorrDia.length} ausência(s).`);
 
                 const numDiv = document.createElement('div');
                 numDiv.className = 'numero-dia';
                 numDiv.textContent = dia;
                 celula.appendChild(numDiv);
 
-                // Renderizar ocorrências do dia
                 ocorrDia.forEach(occ => {
                     const colab   = obterColaborador(occ.colaboradorId);
                     const nome    = colab ? colab.nome : '?';
@@ -1038,25 +1048,35 @@
                     const occDiv = document.createElement('div');
                     occDiv.className = `ocorrencia ${corCss}`;
 
+                    // Cabeçalho da ocorrência (Nome + X)
+                    const header = document.createElement('div');
+                    header.className = 'ocorrencia-header';
+
                     const nomeSpan = document.createElement('span');
                     nomeSpan.className = 'ocorrencia-nome';
                     nomeSpan.textContent = nome;
-                    nomeSpan.title = `${nome}: ${occ.motivo}`;
 
                     const btnRemover = document.createElement('button');
                     btnRemover.className = 'btn-remover';
                     btnRemover.textContent = '×';
-                    btnRemover.setAttribute('aria-label', `Remover ausência de ${nome}`);
                     btnRemover.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        if (confirm(`Excluir ausência de ${nome} em ${dataStr}?`)) {
+                        if (confirm(`Excluir ausência de ${nome} (${occ.motivo}) em ${dataStr}?`)) {
                             excluirOcorrencia(occ.id);
                         }
                     });
 
+                    header.appendChild(nomeSpan);
+                    header.appendChild(btnRemover);
+
+                    // Motivo logo abaixo do nome
+                    const motivoSpan = document.createElement('span');
+                    motivoSpan.className = 'ocorrencia-motivo';
+                    motivoSpan.textContent = occ.motivo;
+
+                    occDiv.appendChild(header);
+                    occDiv.appendChild(motivoSpan);
                     occDiv.addEventListener('click', e => e.stopPropagation());
-                    occDiv.appendChild(nomeSpan);
-                    occDiv.appendChild(btnRemover);
                     celula.appendChild(occDiv);
                 });
 
@@ -1094,7 +1114,7 @@
                     <span class="quadrado-cor" style="background:${getCorHex(colab.cor)}" aria-hidden="true"></span>
                     <span>${colab.nome}</span>
                 </div>
-                <button class="btn-perigo" onclick="window.excluirColab(${colab.id})" aria-label="Excluir ${colab.nome}" style="padding:6px 12px; font-size:13px;">
+                <button class="btn-perigo" onclick="window.excluirColab(${colab.id})" style="padding:6px 12px; font-size:13px;">
                     Excluir
                 </button>
             `;
@@ -1116,7 +1136,6 @@
         });
 
         container.innerHTML = '';
-        // Ordenar por quantidade decrescente
         const ordenados = [...colaboradores].sort((a, b) => (contagem[b.id] || 0) - (contagem[a.id] || 0));
         ordenados.forEach(colab => {
             const qtd = contagem[colab.id] || 0;
@@ -1127,7 +1146,7 @@
                     <span class="quadrado-cor" style="background:${getCorHex(colab.cor)}" aria-hidden="true"></span>
                     <span>${colab.nome}</span>
                 </div>
-                <span class="contador" aria-label="${qtd} ${qtd === 1 ? 'solicitação' : 'solicitações'}">
+                <span class="contador">
                     ${qtd} ${qtd === 1 ? 'solicitação' : 'solicitações'}
                 </span>
             `;
@@ -1150,7 +1169,6 @@
     function abrirModal() {
         const modal = document.getElementById('modal');
         modal.classList.add('aberto');
-        // Focar o primeiro campo interativo
         setTimeout(() => {
             const primeiro = modal.querySelector('input, select, textarea');
             if (primeiro) primeiro.focus();
@@ -1185,19 +1203,16 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="modalMotivo">Motivo</label>
-                <textarea id="modalMotivo" rows="3" placeholder="Descreva o motivo da ausência..."></textarea>
+                <label for="modalMotivo">Motivo da Ausência</label>
+                <select id="modalMotivo">
+                    ${MOTIVOS_LISTA.map(m => `<option value="${m}">${m}</option>`).join('')}
+                </select>
             </div>
         `;
 
         _salvarHandler = () => {
             const colabId = parseInt(document.getElementById('modalColaborador').value);
-            const motivo  = document.getElementById('modalMotivo').value.trim();
-            if (!motivo) {
-                alert('Por favor, informe o motivo da ausência.');
-                document.getElementById('modalMotivo').focus();
-                return;
-            }
+            const motivo  = document.getElementById('modalMotivo').value;
             fecharModal();
             adicionarOcorrencia(data, colabId, motivo);
         };
@@ -1286,7 +1301,7 @@
     }
 
     /* =========================================================
-       EXPOSIÇÃO GLOBAL NECESSÁRIA PARA ONCLICK INLINE
+       EXPOSIÇÃO GLOBAL
     ========================================================= */
     window.excluirColab = (id) => excluirColaborador(id);
 
@@ -1309,12 +1324,10 @@
 
     document.getElementById('novoColaboradorBtn').addEventListener('click', abrirModalNovoColaborador);
 
-    // Fechar modal ao clicar no overlay
     document.getElementById('modal').addEventListener('click', (e) => {
         if (e.target === document.getElementById('modal')) fecharModal();
     });
 
-    // Fechar modal com Escape
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && document.getElementById('modal').classList.contains('aberto')) {
             fecharModal();
@@ -1328,9 +1341,7 @@
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('./sw.js')
                 .then(reg => {
-                    console.log('[PWA] Service Worker registrado:', reg.scope);
-
-                    // Notificar usuário quando há atualização disponível
+                    console.log('[PWA] Service Worker registrado');
                     reg.addEventListener('updatefound', () => {
                         const novoSW = reg.installing;
                         novoSW.addEventListener('statechange', () => {
@@ -1344,9 +1355,6 @@
         });
     }
 
-    /* =========================================================
-       INICIAR APLICAÇÃO
-    ========================================================= */
     init();
 </script>
 </body>
